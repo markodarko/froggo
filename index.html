@@ -239,8 +239,11 @@ class Level{
 	this.player.draw();
 	this.flash.cycleAlpha();
   }
-  reset(){
-	this.tiles.forEach(tile => tile.reset()	);
+  reset(shrinkReset = 0){
+	this.tiles.forEach(tile => {
+		if (shrinkReset && tile.breakReset!=0)tile.shrink = 0;
+		tile.breakCount = tile.breakReset;
+	});
 	this.player.setPos(this.start[0],this.start[1]);
 	this.player.state = 'dead';
 	this.player.jump = GRID_SIZE;
@@ -421,12 +424,11 @@ class Wall extends Block{
 class Tile extends Block{
   constructor(x,y,count = 1){
 	super(x,y,true);
-	this.breakReset = count;
+	this.breakReset = this.breakCount = count;
 	if (count == 0)this.shrink = this.w;
 	else
 	this.shrink = 0;
 	this.setColor(x+y);
-	this.reset();
 	this.makeDots();
   }
   draw(flash){
@@ -472,9 +474,9 @@ class Tile extends Block{
 	if (num%2 == 0)this.color = COLORS.blue1;
 	else this.color = COLORS.blue2;
   }
-  reset(){
-  	this.breakCount = this.breakReset;
-  }
+ // reset(){
+ // 	this.breakCount = this.breakReset;
+  //}
 }
 
 class Froggy{
@@ -627,7 +629,7 @@ class GameControl{
 	this.levelNum++;
 	if(this.levelNum > this.levelsMax) {
 		this.levelNum = 0;
-		this.levels.forEach(level => level.reset())
+		this.levels.forEach(level => {level.reset(1)})
 	}
 	this.currentLevel = this.levels[this.levelNum];
 	this.score = 0;
