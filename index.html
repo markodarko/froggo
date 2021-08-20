@@ -1,0 +1,657 @@
+<HTML>
+
+<style>
+canvas {
+	display:block;
+	background:#2f2e44;
+	user-select:none;
+}
+*{
+	margin: 0;
+   	padding: 0;
+}
+</style>
+
+<CANVAS id="gamewindow"></CANVAS>
+
+<SCRIPT>
+
+var canvas = document.getElementById('gamewindow');
+var ctx = canvas.getContext('2d'); 
+
+const 	SCALE = 6,
+	GRID_SIZE = 8,
+	GRID_COUNT = 8,
+	C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
+
+canvas.height = canvas.width = C_WIDTH * SCALE;
+
+ctx.scale(SCALE,SCALE);
+
+var controller_keys = {
+ArrowLeft	:0,
+ArrowRight	:0,
+ArrowUp 	:0,
+ArrowDown	:0
+}
+
+function randINT(n){
+	return Math.floor(Math.random()*(n+1))
+}
+
+function drawBox(x,y,w,h,color){
+	ctx.fillStyle = color;
+	ctx.fillRect(x,y,w,h);
+}
+
+function collideCheck(obj1,obj2,dx=0,dy=0){
+	const 	x1 = obj1.x 
+		y1 = obj1.y,
+		w1 = obj1.w,
+		h1 = obj1.h;
+			
+	for(let i=0; i < obj2.length; i++){
+
+		const	w2 = obj2[i].w,
+			h2 = obj2[i].h,
+			y2 = obj2[i].y,
+			x2 = obj2[i].x;
+
+		if ((x1 + dx >= x2 + w2) || (x1 + w1 + dx <= x2)) continue;
+		if ((y1 + dy >= y2 + h2) || (y1 + h1 + dy <= y2)) continue;
+		return obj2[i];
+	}
+	return 0
+}
+
+document.addEventListener('keydown',(e)=>{
+  if(controller_keys[e.code] == undefined) return;
+  controller_keys[e.code] = 1;
+})
+
+document.addEventListener('keyup',(e)=>{
+  if(controller_keys[e.code] == undefined) return;
+  controller_keys[e.code] = 0; 
+})
+
+const COLORS = {
+white1 :'white'  ,
+whiteG :'#e3f1bf',
+whiteR :'#f9d7bd',
+black1 :'#486471',
+black2 :'#2f2e44',
+green1 :'#9ed329',
+green2 :'#1dad49',
+yellow1:'#d6eb4a',
+blue1  :'#74c5c2',
+blue2  :'#52959e',
+orange1:'#ef924b',
+orange2:'#f46634',
+grey1  :'#707070',
+grey2  :'#565656'
+}
+
+const COLOR_SETS = {
+frog:
+  [COLORS.whiteG,COLORS.green2,COLORS.green1,COLORS.yellow1,COLORS.black2]
+}
+
+const LEVEL_DAT = {
+total:6,
+	//s = start
+	//f = finish
+	//- = blank space
+	//= = invisible wall	
+	//. = froggy path	
+	//w = wall
+	//L = lava
+template:[
+  '--------',
+  '--------',
+  '--------',
+  '--------',
+  '--------',
+  '--------',
+  '--------',
+  '--------'
+  ],
+
+0:[
+  '--------',
+  '--------',
+  '-######-',
+  '#s....g#',
+  '-==..==-',
+  '---==---',
+  '--------',
+  '--------'
+  ],
+
+1:[
+  '--------',
+  '-#####--',
+  '#s....#-',
+  '#===..##',
+  '..g#....',
+  '===-====',
+  '--------',
+  '--------'
+  ],
+
+2:[
+  '--------',
+  '--####--',
+  '-#gs..#-',
+  '-#....#-',
+  '-#....#-',
+  '-#....#-',
+  '--====--',
+  '--------'
+  ],
+
+3:[
+  '-######-',
+  '#......#',
+  '#.L..w.#',
+  '#.LL...#',
+  '#.s....#',
+  '#.w....#',
+  '#...wg.#',
+  '-======-'
+  ],
+
+4:[
+  '--------',
+  '-######-',
+  '#s.....#',
+  '#=.gw..#',
+  '........',
+  '=......=',
+  '-======-',
+  '--------'
+  ],
+
+5:[
+  '-#.##.#-',
+  '#..s...#',
+  '#......#',
+  '#..ww..#',
+  '........',
+  '=..g...=',
+  '#......#',
+  '-=.==.=-'
+  ]
+}
+
+class Level{
+  constructor(pattern){
+	this.tiles = [];
+	this.tileIndex = new Array(GRID_COUNT^2);
+	this.walls = [];
+	this.goal =[];
+	this.shadow = [];
+	this.flash = new Flash(COLORS.orange2,.01);
+	this.tileCount = 0;
+	for(let row = 0; row < pattern.length; row++){
+	for(let col = 0; col < pattern[0].length; col++){
+
+		const	gridx = col * GRID_SIZE, 
+			gridy = row * GRID_SIZE;
+
+		switch(pattern[row][col]){
+		  case 's':
+			this.start = [gridx,gridy];
+			this.player = new Froggy(gridx,gridy);
+		  case '.':
+			this.tiles.push(new Tile(col,row));
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+		  	break;
+		  case 'g':
+			this.goal = new Goal(col,row);
+		 	break;
+		  case 'w':
+			this.walls.push(new Wall(col,row));
+		  	break;
+		  case '=':
+			this.shadow.push([gridx,gridy])
+		  case '#':
+			this.walls.push(new Wall(col,row,false));
+		  	break;
+		  case 'L':
+			this.tiles.push(new Tile(col,row,0));
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+		  	break;
+		}
+	}
+	}
+	for(let i = 0; i < this.tiles.length; i++ ){
+		this.tileCount += this.tiles[i].breakCount;
+	}
+	
+  }
+  draw(){
+	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,2,COLORS.grey2))
+	this.tiles.forEach(tile => tile.draw(this.flash))
+	this.goal.draw();
+	this.player.drawFlash();
+	this.player.flash.reduceAlpha();
+	this.walls.forEach(wall => wall.draw());
+	this.player.draw();
+	this.flash.cycleAlpha();
+  }
+  reset(){
+	this.tiles.forEach(tile => tile.reset()	);
+	this.player.setPos(this.start[0],this.start[1]);
+	this.player.state = 'dead';
+	this.player.jump = GRID_SIZE;
+  }
+}
+
+const SPRITES={
+frog:
+[
+  [
+  '........',
+  '........',
+  '...1010.',
+  '..11111.',
+  '..21333.',
+  '.111333.',
+  '.211333.',
+  '.113333.'
+  ],
+  [
+  '........',
+  '........',
+  '........',
+  '...1010.',
+  '..11111.',
+  '.211333.',
+  '21133333',
+  '11333333'
+  ],
+  [
+  '........',
+  '........',
+  '...1010.',
+  '..11111.',
+  '..21333.',
+  '.111333.',
+  '.211333.',
+  '.113333.'
+  ],
+  [
+  '........',
+  '...1010.',
+  '..11111.',
+  '..11444.',
+  '..21333.',
+  '.111333.',
+  '.211333.',
+  '.113333.'
+  ]
+]
+}
+
+class Sprite{
+  constructor(img,colors){
+	this.img=img;  
+	this.frame = 0;
+	this.maxFrame = img.length;
+	this.speed = 10;
+	this.time = 0; 
+	this.colors = colors
+  }
+  draw(x,y){
+	const frame = this.img[this.frame]
+  	for(let row=0; row < 8; row ++){
+	for(let col=0; col < 8; col ++){
+		const num = frame[row][col]
+		if (num == '.')continue
+		ctx.fillStyle = this.colors[num]	
+		ctx.fillRect(x+col,y+row,1,1)
+	}
+	}
+  }
+   updateFrame(){
+	if (this.speed == 0) return;
+	this.time++
+	if (this.time >= this.speed){
+	this.time=0;
+	this.frame++;
+	this.frame %= this.maxFrame;
+	}
+  }
+  swapImg(img){
+	this.img = img;
+	this.maxFrame = this.img.length;
+	this.frame = 0;
+  }
+  setFrame(frame){
+	this.time = 0;
+	this.frame = frame;
+  }
+}
+class Block {
+  constructor(x,y){
+	this.x = x * GRID_SIZE;
+	this.y = y * GRID_SIZE;
+	this.w = this.h = GRID_SIZE;
+  }
+  draw(color='black'){
+	drawBox(this.x,this.y,this.w,this.h,color);
+  }
+}
+
+class Flash{
+  constructor(color = COLORS.white1,inc=.1){
+	this.alpha = 0;
+	this.color = color;
+	this.inc = inc;
+	this.dir = -1;
+  }
+  draw(x,y,w=GRID_SIZE,h=GRID_SIZE){
+	if (this.alpha < 0)return;
+	ctx.save();
+	ctx.globalAlpha = this.alpha;
+  	drawBox(x,y,w,h,this.color);
+	ctx.restore();
+  }
+  reduceAlpha(){
+	this.alpha -= this.inc;
+  }
+  cycleAlpha(){
+	this.alpha += this.inc * this.dir;
+	
+	if (this.alpha<0){
+		this.alpha = 0;
+		this.dir=1;
+	}
+	else if(this.alpha>1){
+		this.alpha = 1;
+		this.dir=-1;
+	}
+  }
+}
+
+class Goal extends Block{
+  constructor(x,y){
+	super(x,y);
+	
+  }
+  draw(){
+  	super.draw(COLORS.yellow1)
+  }
+}
+
+class Wall extends Block{
+  constructor(x,y,visible = true){
+	super(x,y);
+	this.y -= 1;
+	this.h += 1;
+	this.visible = visible;
+	this.flash = new Flash();
+	this.makeDots()
+	
+  }
+  draw(){
+	if(!this.visible)return;
+	super.draw(COLORS.grey2);
+	this.dots.forEach(dot => drawBox(this.x+dot.x,this.y+dot.y,1,1,dot.color))
+	drawBox(this.x,this.y+this.h,this.w,-3,COLORS.black2)
+	this.flash.draw(this.x,this.y,this.w,this.h);
+	this.flash.reduceAlpha();
+  }
+  makeDots(){
+	this.dots = [];
+	for (let row = 0; row < this.h; row++){
+	for (let col = 0; col < this.w; col++){
+		if(this.dots.length == 8)return
+		const num = randINT(100);
+		if (num > 20) continue;
+		var color = COLORS.grey1;
+		if (num <=10) color = COLORS.black2
+		this.dots.push({x:col,y:row, color:color})
+		col++;
+	}
+	}
+  }
+}
+
+class Tile extends Block{
+  constructor(x,y,count = 1){
+	super(x,y,true);
+	this.breakReset = count;
+	if (count == 0)this.shrink = this.w;
+	else
+	this.shrink = 0;
+	this.setColor(x+y);
+	this.reset();
+	this.makeDots();
+  }
+  draw(flash){
+	if(this.breakCount < 1) this.shrink = Math.min(this.shrink + 1, GRID_SIZE);
+	else this.shrink = Math.max(this.shrink - 1 ,0);
+
+	if (this.shrink > 0){
+		super.draw(COLORS.orange1);
+		flash.draw(this.x,this.y);
+		this.dots.forEach(dot => this.drawDot(dot));
+		
+	}
+	if (this.shrink<this.w)
+	drawBox(this.x+this.shrink/2,this.y+this.shrink/2,this.w-this.shrink,this.h-this.shrink,this.color);
+  }
+ 
+  drawDot(dot){
+	ctx.save();
+	ctx.globalAlpha = dot.alpha;
+	drawBox(this.x+dot.x,this.y+dot.y,1,1,COLORS.whiteR)
+	dot.alpha +=.01*dot.dir;
+	if (dot.alpha<0){
+		dot.alpha = 0;
+		dot.dir *=-1;
+		dot.x = randINT(7);
+		dot.y = randINT(7);
+	}
+	else if(dot.alpha > 1){
+		dot.alpha = 1;
+		dot.dir *=-1;
+	}
+	ctx.restore()
+  }
+  makeDots(){
+	this.dots = [];
+	for (let i = 0; i < randINT(3); i++){
+		var dir = -1;
+		if(randINT(1))dir = 1;
+		this.dots.push({x:randINT(7),y:randINT(7),dir:dir,alpha:Math.random()});
+	}
+  }
+  setColor(num){
+	if (num%2 == 0)this.color = COLORS.blue1;
+	else this.color = COLORS.blue2;
+  }
+  reset(){
+  	this.breakCount = this.breakReset;
+  }
+}
+
+class Froggy{
+  constructor(x,y){
+	this.offsetX = 2;
+	this.offsetY = 2;
+	this.setPos(x,y);
+	this.w = 4;
+	this.h = 3;
+	this.sprite = new Sprite(SPRITES.frog,COLOR_SETS.frog);
+	this.speedX = this.speedY = 0;
+	this.jump = GRID_SIZE;
+	this.flash = new Flash();
+	this.state = 'dead'; //'idle', 'walking', 'dead'
+  }
+  update(){
+	var OBJ;
+	switch (this.state){
+	  case 'dead':
+		this.jump--;
+		if (this.jump < 1){
+		  this.state = 'idle'
+		}
+	  break;	
+	  case 'idle':
+		if(this.checkInputs() && this.flash.alpha <= 0){
+		  this.jump = 3;
+		  this.sprite.setFrame(2);
+		  this.state = 'walking';
+		}
+	  break;
+	  case 'walking':
+		this.x += this.speedX;
+		this.y += this.speedY;
+		if(OBJ = collideCheck(this,GAME.currentLevel.walls)){
+			this.reverseDirection();
+			OBJ.flash.alpha = 1;
+		}
+		this.screenWrapCheck();
+
+		if(this.gridCheck()){
+		  
+		  this.stopMove();
+		  this.sprite.setFrame(1);
+		  this.jump = 0;
+
+		  const newPos = this.getGridPos()
+		  if (newPos != this.gridPos){
+		    if(OBJ=GAME.checkTile(this.gridPos)){
+		    	OBJ.breakCount--;
+			GAME.score++;
+		    }
+		    this.flash.alpha = 1;
+		    this.gridPos = newPos;
+		    if(OBJ=GAME.checkTile(this.gridPos)){
+			if(OBJ.breakCount <= 0){
+			  GAME.currentLevel.reset();
+			  GAME.score = 0;
+			  break;
+			}
+		    }
+		  }
+		  this.state = 'idle'; 
+		}
+	  break;
+	}
+	
+  }
+  draw(){
+	drawBox(this.x - 2, this.y + 2, this.w + 3, 2,COLORS.black2)
+	this.sprite.updateFrame()
+	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)
+	
+	//drawBox(this.x,this.y,this.w,this.h,'red')
+  }
+  drawFlash(){
+	this.flash.draw(this.trueX(),this.trueY())
+  }
+  setPos(x,y){
+	this.x = x+this.offsetX;
+	this.y = y+this.offsetY;
+	this.gridPos = this.getGridPos();
+  }
+  gridCheck(){
+	const 	X = (this.x-this.offsetX) % GRID_SIZE,
+		Y = (this.y-this.offsetY) % GRID_SIZE;
+	if (X == 0 && Y == 0) return true;
+  }
+  screenWrapCheck(){
+  	if(this.x > C_WIDTH)this.x = 0 - this.w ;
+	else if (this.x < 0 - this.w) this.x = C_WIDTH;
+	else if (this.y > C_HEIGHT)this.y = 0 - this.h
+	else if (this.y < 0 - this.h) this.y = C_HEIGHT;
+	else return 1;
+  }
+  checkInputs(){
+	this.speedX = controller_keys['ArrowRight'] - controller_keys['ArrowLeft'];
+	if (this.speedX != 0) return true;
+	this.speedY = controller_keys['ArrowDown'] - controller_keys['ArrowUp'];
+	if (this.speedY != 0) return true;
+  }
+  trueX(){
+	return this.x - this.offsetX;
+  }
+  trueY(){
+  	return this.y - this.offsetY;
+  }
+  stopMove(){
+	this.speedX = this.speedY = 0;
+  }
+ 
+  reverseDirection(){
+  	this.speedX *= -1;
+	this.speedY *= -1;
+  }
+  getGridPos(){
+  	return this.trueY() + this.trueX()/GRID_SIZE
+  }
+}
+
+
+class GameControl{
+  constructor(){
+	this.levels = []
+	for(let i=0; i<LEVEL_DAT.total; i++){
+		this.levels.push(new Level(LEVEL_DAT[i]))
+	}
+	this.levelsMax = this.levels.length-1;
+	this.levelNum = 0;
+	this.currentLevel = this.levels[this.levelNum];
+	this.state = 'main';
+	this.score = 0;
+  }
+
+  checkTile(coords){
+	const level = this.currentLevel;
+	const tile = level.tiles[level.tileIndex[coords]];
+	if(tile != undefined) {
+		return tile;
+	}
+  }
+  addScore(){
+	this.score++;
+  }
+  checkScore(){
+  	if (this.score >= this.currentLevel.tileCount) 
+	this.gotoNextLevel();
+  }
+    gotoNextLevel(){
+	this.levelNum++;
+	if(this.levelNum > this.levelsMax) {
+		this.levelNum = 0;
+		this.levels.forEach(level => level.reset())
+	}
+	this.currentLevel = this.levels[this.levelNum];
+	this.score = 0;
+  }
+}
+
+
+
+function main(){
+  requestAnimationFrame(main)
+  ctx.clearRect(0,0,C_WIDTH,C_WIDTH)
+	switch (GAME.state){
+		case 'start':
+		break;
+		case 'main':
+		  GAME.currentLevel.player.update();
+		  GAME.currentLevel.draw();
+		  GAME.checkScore();
+		break;
+
+	}
+  
+}
+var GAME = new GameControl()
+main()
+</SCRIPT>
+</HTML>
