@@ -16,12 +16,13 @@ var SOUNDS = (function(){
 
 var s = {
 
-jump1	:'jump6',
-jump2	:'jump7',
+jump0	:'jump1',
+jump1	:'jump2',
 bounce	:'bounce',
 explode	:'explode',
-teleport:'Randomize'
-
+teleport:'Randomize',
+tile0	:'jump8',
+tile1	:'jump9'	
 }
 
 for (let n in s){

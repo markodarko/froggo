@@ -1,5 +1,7 @@
 <HTML>
-
+<head>
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
+</head>
 <style>
 canvas {
 	display:block;
@@ -15,6 +17,7 @@ canvas {
 <CANVAS id="gamewindow"></CANVAS>
 
 <SCRIPT src= 'sounds.js'></SCRIPT>
+<SCRIPT src= 'controls.js'></SCRIPT>
 <SCRIPT>
 
 var canvas = document.getElementById('gamewindow');
@@ -26,15 +29,9 @@ const 	SCALE = 6,
 	C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
 
 canvas.height = canvas.width = C_WIDTH * SCALE;
-
 ctx.scale(SCALE,SCALE);
 
-var controller_keys = {
-ArrowLeft	:0,
-ArrowRight	:0,
-ArrowUp 	:0,
-ArrowDown	:0
-}
+canvas.addEventListener('touchmove', swipeControl.move)
 
 function randINT(n){
 	return Math.floor(Math.random()*(n+1))
@@ -64,16 +61,6 @@ function collideCheck(obj1,obj2,dx=0,dy=0){
 	}
 	return 0
 }
-
-document.addEventListener('keydown',(e)=>{
-  if(controller_keys[e.code] == undefined) return;
-  controller_keys[e.code] = 1;
-})
-
-document.addEventListener('keyup',(e)=>{
-  if(controller_keys[e.code] == undefined) return;
-  controller_keys[e.code] = 0; 
-})
 
 const COLORS = {
 white1 :'white'  ,
@@ -552,6 +539,7 @@ class Tile extends Block{
 
 class Froggy{
   constructor(x,y){
+	this.jumpSound = 0;
 	this.offsetX = 2;
 	this.offsetY = 2;
 	this.setPos(x,y);
@@ -572,6 +560,7 @@ class Froggy{
 		this.jump--;
 		if (this.jump < 1){
 		  this.state = 'idle'
+		 // this.playJumpSound()
 		}
 	  break;	
 	  case 'idle':
@@ -579,6 +568,7 @@ class Froggy{
 		  this.jump = 3;
 		  this.sprite.setFrame(2);
 		  this.state = 'walking';
+		  this.playJumpSound();
 		}
 	  break;
 	  case 'walking':
@@ -586,6 +576,7 @@ class Froggy{
 		this.y += this.speedY;
 		if(OBJ = collideCheck(this,GAME.currentLevel.walls)){
 			this.reverseDirection();
+			SOUNDS.bounce.play();
 			OBJ.flash.alpha = 1;
 		}
 		this.screenWrapCheck();
@@ -606,11 +597,13 @@ class Froggy{
 		    this.gridPos = newPos;
 		    if(OBJ=GAME.checkTile(this.gridPos)){
 			if(OBJ.breakCount <= 0){
+			  SOUNDS.explode.play();
 			  this.dead = 1;
 			  GAME.reset = 1;
 			  break;
 			}
 		    }
+		    //SOUNDS['tile'+this.jumpSound].play();
 		  }
 		  this.state = 'idle'; 
 		}
@@ -625,6 +618,10 @@ class Froggy{
 	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)
 	
 	//drawBox(this.x,this.y,this.w,this.h,'red')
+  }
+  playJumpSound(){
+	SOUNDS['jump' + this.jumpSound].play()
+	this.jumpSound = (this.jumpSound+1)%2
   }
   drawFlash(){
 	this.flash.draw(this.trueX(),this.trueY())
@@ -647,9 +644,9 @@ class Froggy{
 	else return 1;
   }
   checkInputs(){
-	this.speedX = controller_keys['ArrowRight'] - controller_keys['ArrowLeft'];
+	this.speedX = controller_keys['ArrowRight'] - controller_keys['ArrowLeft'] + swipeControl.swipeDir[0];
 	if (this.speedX != 0) return true;
-	this.speedY = controller_keys['ArrowDown'] - controller_keys['ArrowUp'];
+	this.speedY = controller_keys['ArrowDown'] - controller_keys['ArrowUp'] + swipeControl.swipeDir[1];
 	if (this.speedY != 0) return true;
   }
   trueX(){
@@ -705,7 +702,12 @@ class GameControl{
 	this.currentLevel = this.levels[this.levelNum];
   }
   checkScore(){
-	if (this.score >= this.currentLevel.tileCount) this.currentLevel.player.dead = 1;
+	if (this.score >= this.currentLevel.tileCount) {
+		if (!this.currentLevel.player.dead)SOUNDS.teleport.play();
+		this.currentLevel.player.dead = 1;
+		
+		this.score = 0;
+	}
   }
   checkNextLevel(){
 	if(this.reset){
@@ -722,7 +724,6 @@ class GameControl{
 	
   }
   drawCloud(){
-	if (this.cloud.dead) return;
 	const player = this.currentLevel.player;
 	if (player.dead)
 	this.cloud.draw(player.trueX()-4,player.trueY()-4)
@@ -746,6 +747,8 @@ function main(){
 		break;
 
 	}
+  swipeControl.swipeDir[0] = 0;
+  swipeControl.swipeDir[1] = 0;
 }
 var GAME = new GameControl()
 main()
