@@ -14,6 +14,7 @@ canvas {
 
 <CANVAS id="gamewindow"></CANVAS>
 
+<SCRIPT src= 'sounds.js'></SCRIPT>
 <SCRIPT>
 
 var canvas = document.getElementById('gamewindow');
@@ -97,7 +98,7 @@ frog:
 }
 
 const LEVEL_DAT = {
-total:6,
+total:8,
 	//s = start
 	//f = finish
 	//- = blank space
@@ -171,7 +172,7 @@ template:[
   '--------'
   ],
 
-5:[
+6:[
   '-#.##.#-',
   '#..s...#',
   '#......#',
@@ -180,6 +181,26 @@ template:[
   '=..g...=',
   '#......#',
   '-=.==.=-'
+  ],
+5:[
+  '---####-',
+  '--#s...#',
+  '###....#',
+  '...g..=#',
+  '.ww.==-#',
+  '.....#-#',
+  '==...#--',
+  '--===---'
+  ],
+  7:[
+  '--####--',
+  '-#...g#-',
+  '##.....#',
+  '.w..LLs.',
+  '....L...',
+  '==....==',
+  '-#...=--',
+  '--===---'
   ]
 }
 
@@ -247,6 +268,7 @@ class Level{
 	this.player.setPos(this.start[0],this.start[1]);
 	this.player.state = 'dead';
 	this.player.jump = GRID_SIZE;
+	this.player.dead = 0;
   }
 }
 
@@ -345,6 +367,57 @@ class Block {
 	drawBox(this.x,this.y,this.w,this.h,color);
   }
 }
+
+class Cloud{
+  constructor(){
+	this.dead = 0;
+	this.colors = [COLORS.white1,COLORS.whiteG]
+	this.frameNum = 0;
+	this.time = 0;
+	this.frames = {
+		0:[
+		this.colors[0],
+		[5,5,6,6]
+		],
+		1:[
+		this.colors[1],
+		[3,3,10,10]
+		],
+		2:[
+		this.colors[0],
+		[2,2,7,5],[9,2,5,7],[7,9,7,5],[2,7,5,7]
+		],
+		3:[
+		this.colors[1],
+		[1,1,10,4],[11,1,4,10],[5,11,10,4],[1,5,4,10]
+		],
+		4:[
+		this.colors[0],
+		[0,0,2,16],[0,0,16,2],[14,0,2,16],[0,14,16,2]
+		],
+		5:[
+		this.colors[1],
+		[0,0,1,16],[0,0,16,1],[15,0,1,16],[0,15,16,1]
+		]
+	}
+  }
+  draw(x,y){
+	const frame = this.frames[this.frameNum];
+	for(let i=1; i<frame.length; i++ ){
+	drawBox(x+frame[i][0],y+frame[i][1],frame[i][2],frame[i][3],frame[0]);
+	}
+	if(this.time > 4){
+		this.time = 0
+		this.frameNum++
+		if (this.frameNum > 5) {
+		  this.frameNum = 0;
+		  this.dead = 1; 
+		}
+	}
+	this.time++;
+  }
+}
+
 
 class Flash{
   constructor(color = COLORS.white1,inc=.1){
@@ -474,9 +547,7 @@ class Tile extends Block{
 	if (num%2 == 0)this.color = COLORS.blue1;
 	else this.color = COLORS.blue2;
   }
- // reset(){
- // 	this.breakCount = this.breakReset;
-  //}
+ 
 }
 
 class Froggy{
@@ -491,8 +562,10 @@ class Froggy{
 	this.jump = GRID_SIZE;
 	this.flash = new Flash();
 	this.state = 'dead'; //'idle', 'walking', 'dead'
+	this.dead = 0;
   }
   update(){
+	if (this.dead)return;
 	var OBJ;
 	switch (this.state){
 	  case 'dead':
@@ -533,8 +606,8 @@ class Froggy{
 		    this.gridPos = newPos;
 		    if(OBJ=GAME.checkTile(this.gridPos)){
 			if(OBJ.breakCount <= 0){
-			  GAME.currentLevel.reset();
-			  GAME.score = 0;
+			  this.dead = 1;
+			  GAME.reset = 1;
 			  break;
 			}
 		    }
@@ -546,6 +619,7 @@ class Froggy{
 	
   }
   draw(){
+	if (this.dead)return
 	drawBox(this.x - 2, this.y + 2, this.w + 3, 2,COLORS.black2)
 	this.sprite.updateFrame()
 	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)
@@ -609,6 +683,7 @@ class GameControl{
 	this.currentLevel = this.levels[this.levelNum];
 	this.state = 'main';
 	this.score = 0;
+	this.cloud = new Cloud();
   }
 
   checkTile(coords){
@@ -621,22 +696,38 @@ class GameControl{
   addScore(){
 	this.score++;
   }
-  checkScore(){
-  	if (this.score >= this.currentLevel.tileCount) 
-	this.gotoNextLevel();
-  }
-    gotoNextLevel(){
+  gotoNextLevel(){
 	this.levelNum++;
 	if(this.levelNum > this.levelsMax) {
 		this.levelNum = 0;
 		this.levels.forEach(level => {level.reset(1)})
 	}
 	this.currentLevel = this.levels[this.levelNum];
-	this.score = 0;
+  }
+  checkScore(){
+	if (this.score >= this.currentLevel.tileCount) this.currentLevel.player.dead = 1;
+  }
+  checkNextLevel(){
+	if(this.reset){
+	  this.currentLevel.reset();
+	  this.score = 0;
+	  this.cloud.dead = 0;
+	  this.reset = 0;
+	}
+	else {
+	  this.gotoNextLevel()
+	  this.score = 0;
+	  this.cloud.dead = 0;
+	}
+	
+  }
+  drawCloud(){
+	if (this.cloud.dead) return;
+	const player = this.currentLevel.player;
+	if (player.dead)
+	this.cloud.draw(player.trueX()-4,player.trueY()-4)
   }
 }
-
-
 
 function main(){
   requestAnimationFrame(main)
@@ -648,10 +739,13 @@ function main(){
 		  GAME.currentLevel.player.update();
 		  GAME.currentLevel.draw();
 		  GAME.checkScore();
+		  GAME.drawCloud();
+		  if(GAME.cloud.dead){
+		    GAME.checkNextLevel();
+		  }
 		break;
 
 	}
-  
 }
 var GAME = new GameControl()
 main()
