@@ -1,3 +1,5 @@
+var activated_soundFX = true;
+
 class SoundFX{
   constructor(src){
 	this.sound = document.createElement('audio');
@@ -7,6 +9,7 @@ class SoundFX{
  	this.sound.style.display = "none";
   }
   play(){
+	if(!activated_soundFX)return
 	this.sound.currentTime = 0;
 	this.sound.play();
   }
@@ -21,8 +24,10 @@ jump1	:'jump2',
 bounce	:'bounce',
 explode	:'explode',
 teleport:'Randomize',
-tile0	:'jump8',
-tile1	:'jump9'	
+tile0	:'j3',
+tile1	:'j4',
+jomp0	:'j5',
+jomp1	:'j6'	
 }
 
 for (let n in s){

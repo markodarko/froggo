@@ -1,7 +1,8 @@
 <HTML>
-<head>
-<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
-</head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+
+
 <style>
 canvas {
 	display:block;
@@ -15,7 +16,6 @@ canvas {
 </style>
 
 <CANVAS id="gamewindow"></CANVAS>
-
 <SCRIPT src= 'sounds.js'></SCRIPT>
 <SCRIPT src= 'controls.js'></SCRIPT>
 <SCRIPT>
@@ -23,12 +23,14 @@ canvas {
 var canvas = document.getElementById('gamewindow');
 var ctx = canvas.getContext('2d'); 
 
-const 	SCALE = 6,
+const 	SCALE = Math.floor(window.innerWidth/64) //6,
 	GRID_SIZE = 8,
 	GRID_COUNT = 8,
 	C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
 
-canvas.height = canvas.width = C_WIDTH * SCALE;
+//canvas.height = canvas.width = C_WIDTH * SCALE;
+canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
 ctx.scale(SCALE,SCALE);
 
 canvas.addEventListener('touchmove', swipeControl.move)
@@ -568,7 +570,7 @@ class Froggy{
 		  this.jump = 3;
 		  this.sprite.setFrame(2);
 		  this.state = 'walking';
-		  this.playJumpSound();
+		 // this.playJumpSound();
 		}
 	  break;
 	  case 'walking':
@@ -593,7 +595,6 @@ class Froggy{
 		    	OBJ.breakCount--;
 			GAME.score++;
 		    }
-		    this.flash.alpha = 1;
 		    this.gridPos = newPos;
 		    if(OBJ=GAME.checkTile(this.gridPos)){
 			if(OBJ.breakCount <= 0){
@@ -603,7 +604,9 @@ class Froggy{
 			  break;
 			}
 		    }
-		    //SOUNDS['tile'+this.jumpSound].play();
+		    this.flash.alpha = 1;
+		    this.playJumpSound();
+		   //SOUNDS['tile'+this.jumpSound].play();
 		  }
 		  this.state = 'idle'; 
 		}
@@ -620,7 +623,7 @@ class Froggy{
 	//drawBox(this.x,this.y,this.w,this.h,'red')
   }
   playJumpSound(){
-	SOUNDS['jump' + this.jumpSound].play()
+	SOUNDS['tile' + this.jumpSound].play()
 	this.jumpSound = (this.jumpSound+1)%2
   }
   drawFlash(){
@@ -732,7 +735,9 @@ class GameControl{
 
 function main(){
   requestAnimationFrame(main)
-  ctx.clearRect(0,0,C_WIDTH,C_WIDTH)
+  //ctx.clearRect(0,0,canvas.width,canvas.height)
+  drawBox(0,0,C_WIDTH,canvas.height,COLORS.black2)
+  
 	switch (GAME.state){
 		case 'start':
 		break;
@@ -747,6 +752,7 @@ function main(){
 		break;
 
 	}
+  drawBox(canvas.width,0,-(canvas.width-C_WIDTH),canvas.height,'black')
   swipeControl.swipeDir[0] = 0;
   swipeControl.swipeDir[1] = 0;
 }
