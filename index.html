@@ -6,7 +6,7 @@
 <style>
 canvas {
 	display:block;
-	background:#2f2e44;
+	background:#1b193a;
 	user-select:none;
 }
 *{
@@ -18,6 +18,7 @@ canvas {
 <CANVAS id="gamewindow"></CANVAS>
 <SCRIPT src= 'sounds.js'></SCRIPT>
 <SCRIPT src= 'controls.js'></SCRIPT>
+<SCRIPT src= 'colors.js'></SCRIPT>
 <SCRIPT>
 
 var canvas = document.getElementById('gamewindow');
@@ -87,30 +88,8 @@ function collideCheck(obj1,obj2,dx=0,dy=0){
 	return 0
 }
 
-const COLORS = {
-white1 :'white'  ,
-whiteG :'#e3f1bf',
-whiteR :'#f9d7bd',
-black1 :'#486471',
-black2 :'#2f2e44',
-green1 :'#9ed329',
-green2 :'#1dad49',
-yellow1:'#d6eb4a',
-blue1  :'#74c5c2',
-blue2  :'#52959e',
-orange1:'#ef924b',
-orange2:'#f46634',
-grey1  :'#707070',
-grey2  :'#565656'
-}
-
-const COLOR_SETS = {
-frog:
-  [COLORS.whiteG,COLORS.green2,COLORS.green1,COLORS.yellow1,COLORS.black2]
-}
-
 const LEVEL_DAT = {
-total:8,
+total:9,
 	//s = start
 	//f = finish
 	//- = blank space
@@ -184,7 +163,29 @@ template:[
   '--------'
   ],
 
+5:[
+  '---####-',
+  '--#s...#',
+  '###....#',
+  '#..g..=-',
+  '#.w.w.#-',
+  '#.....#-',
+  '-=....#-',
+  '--====--'
+  ],
+
 6:[
+  '--####--',
+  '-#...g#-',
+  '##.....#',
+  '.w..LLs.',
+  '....L...',
+  '==....==',
+  '-#...=--',
+  '--===---'
+  ],
+
+7:[
   '-#.##.#-',
   '#..s...#',
   '#......#',
@@ -194,25 +195,16 @@ template:[
   '#......#',
   '-=.==.=-'
   ],
-5:[
-  '---####-',
-  '--#s...#',
-  '###....#',
-  '...g..=#',
-  '.ww.==-#',
-  '.....#-#',
-  '==...#--',
-  '--===---'
-  ],
-  7:[
-  '--####--',
-  '-#...g#-',
-  '##.....#',
-  '.w..LLs.',
-  '....L...',
-  '==....==',
-  '-#...=--',
-  '--===---'
+
+8:[
+  '-######-',
+  '#......#',
+  '#.wggw.#',
+  '#......#',
+  '#..s...#',
+  '#..w...#',
+  '-L.....#',
+  '-======-'
   ]
 }
 
@@ -221,7 +213,7 @@ class Level{
 	this.tiles = [];
 	this.tileIndex = new Array(GRID_COUNT^2);
 	this.walls = [];
-	this.goal =[];
+	this.goal = [];
 	this.shadow = [];
 	this.flash = new Flash(COLORS.orange2,.01);
 	this.tileCount = 0;
@@ -240,7 +232,7 @@ class Level{
 			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
 		  	break;
 		  case 'g':
-			this.goal = new Goal(col,row);
+			this.goal.push(new Goal(col,row));
 		 	break;
 		  case 'w':
 			this.walls.push(new Wall(col,row));
@@ -263,9 +255,9 @@ class Level{
 	
   }
   draw(){
-	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,2,COLORS.grey2))
+	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,1,COLORS.blue3))
 	this.tiles.forEach(tile => tile.draw(this.flash))
-	this.goal.draw();
+	this.goal.forEach(goal => goal.draw());
 	this.player.drawFlash();
 	this.player.flash.reduceAlpha();
 	this.walls.forEach(wall => wall.draw());
@@ -465,10 +457,17 @@ class Flash{
 class Goal extends Block{
   constructor(x,y){
 	super(x,y);
+	this.y -= 1;
+	this.h += 1;
+	this.detail = 	[	[this.x+1,this.y,this.w-2,this.h-1,COLORS.yellow1],
+				[this.x,this.y+1,this.w,this.h-3,COLORS.yellow1],
+				[this.x,this.y+this.h,this.w,-1,COLORS.orange3]
+			]
 	
   }
   draw(){
-  	super.draw(COLORS.yellow1)
+  	super.draw(COLORS.orange1)
+	this.detail.forEach(d=>drawBox(d[0],d[1],d[2],d[3],d[4]))
   }
 }
 
@@ -485,8 +484,8 @@ class Wall extends Block{
   draw(){
 	if(!this.visible)return;
 	super.draw(COLORS.grey2);
-	this.dots.forEach(dot => drawBox(this.x+dot.x,this.y+dot.y,1,1,dot.color))
-	drawBox(this.x,this.y+this.h,this.w,-3,COLORS.black2)
+	this.dots.forEach(dot => drawBox(dot.x,dot.y,1,1,dot.color))
+	drawBox(this.x,this.y+this.h,this.w,-3,COLORS.black1)
 	this.flash.draw(this.x,this.y,this.w,this.h);
 	this.flash.reduceAlpha();
   }
@@ -498,8 +497,8 @@ class Wall extends Block{
 		const num = randINT(100);
 		if (num > 20) continue;
 		var color = COLORS.grey1;
-		if (num <=10) color = COLORS.black2
-		this.dots.push({x:col,y:row, color:color})
+		if (num <=10) color = COLORS.black1;
+		this.dots.push({x:col+this.x,y:row+this.y, color:color})
 		col++;
 	}
 	}
