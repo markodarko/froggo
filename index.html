@@ -16,9 +16,12 @@ canvas {
 </style>
 
 <CANVAS id="gamewindow"></CANVAS>
-<SCRIPT src= 'sounds.js'></SCRIPT>
-<SCRIPT src= 'controls.js'></SCRIPT>
-<SCRIPT src= 'colors.js'></SCRIPT>
+
+<SCRIPT src= 'sounds.js'	></SCRIPT>
+<SCRIPT src= 'controls.js'	></SCRIPT>
+<SCRIPT src= 'colors.js'	></SCRIPT>
+<SCRIPT src= 'menu.js'		></SCRIPT>
+
 <SCRIPT>
 
 var canvas = document.getElementById('gamewindow');
@@ -52,8 +55,8 @@ function resize_canvas(){
 function translate_canvas(){
 	WINDOW_W = canvas.width/SCALE,
 	WINDOW_H = canvas.height/SCALE;
-	C_OFFSET_X = (WINDOW_W - C_WIDTH)/2;
- 	C_OFFSET_Y = (WINDOW_H - C_HEIGHT)/2;
+	C_OFFSET_X = Math.floor((WINDOW_W - C_WIDTH)/2);
+ 	C_OFFSET_Y = Math.floor((WINDOW_H - C_HEIGHT)/2);
   	ctx.translate(C_OFFSET_X,C_OFFSET_Y)
 }
 
@@ -791,7 +794,7 @@ function main(){
   swipeControl.swipeDir[0] = 0;
   swipeControl.swipeDir[1] = 0;
 }
-var GAME = new GameControl()
-main()
+var GAME = new GameControl();
+main();
 </SCRIPT>
 </HTML>
