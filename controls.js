@@ -18,6 +18,7 @@ document.addEventListener('keyup',(e)=>{
 var swipeControl = {
   swipeDir:	[0,0],
   coord:	{x0:null,y0:null},
+  endTouch:	{x:0,y:0},
   time:		null,
   press: 	function(e){
 		  let c = swipeControl;
@@ -37,11 +38,9 @@ var swipeControl = {
 			else if (y-c.coord.y0 >  dist) c.swipeDir = [0, 1];
 			else if (y-c.coord.y0 < -dist) c.swipeDir = [0,-1];
 		  }  
-		},
-  move:		function(e){
-		  e.preventDefault();
+		  c.endTouch.x = x/SCALE-C_OFFSET_X;
+		  c.endTouch.y = y/SCALE-C_OFFSET_Y;
 		}
-  
 }
 
 

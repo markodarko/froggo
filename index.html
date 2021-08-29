@@ -21,6 +21,8 @@ canvas {
 <SCRIPT src= 'controls.js'	></SCRIPT>
 <SCRIPT src= 'colors.js'	></SCRIPT>
 <SCRIPT src= 'menu.js'		></SCRIPT>
+<SCRIPT src= 'helpers.js'	></SCRIPT>
+<SCRIPT src= 'starsBG.js'	></SCRIPT>
 
 <SCRIPT>
 
@@ -69,6 +71,21 @@ function randINT(n){
 function drawBox(x,y,w,h,color){
 	ctx.fillStyle = color;
 	ctx.fillRect(x,y,w,h);
+}
+
+function collidePointCheck(point,obj2){
+	const 	x1 = point.x,
+		y1 = point.y,
+		w2 = obj2.w,
+		h2 = obj2.h,
+		y2 = obj2.y,
+		x2 = obj2.x;
+
+	if ((x1  >= x2 + w2) || (x1   <= x2)) return 0;
+	if ((y1  >= y2 + h2) || (y1   <= y2)) return 0;
+	
+	return 1; 
+
 }
 
 function collideCheck(obj1,obj2,dx=0,dy=0){
@@ -707,9 +724,11 @@ class GameControl{
 	this.levelsMax = this.levels.length-1;
 	this.levelNum = 0;
 	this.currentLevel = this.levels[this.levelNum];
-	this.state = 'main';
+	this.state = 'start_menu';
 	this.score = 0;
 	this.cloud = new Cloud();
+	this.BG = new GameBackground();
+	this.startButton = new StartFrog();
   }
 
   checkTile(coords){
@@ -725,6 +744,9 @@ class GameControl{
   gotoNextLevel(){
 	this.levelNum++;
 	if(this.levelNum > this.levelsMax) {
+		this.startButton.reset();
+		this.state = 'start_menu';
+		swipeControl.endTouch.x = swipeControl.endTouch.y = 0;
 		this.levelNum = 0;
 		this.levels.forEach(level => {level.reset(1)})
 	}
@@ -762,16 +784,19 @@ class GameControl{
 function main(){
   requestAnimationFrame(main)
   ctx.clearRect(0,0,canvas.width,canvas.height)
-
   if(canvas.height != window.innerHeight){
 	ctx.restore();
 	ctx.save();
 	resize_canvas();
 	translate_canvas();
   }
- 
+
 	switch (GAME.state){
-		case 'start':
+		case 'start_menu':
+		  GAME.startButton.update();
+		  GAME.BG.draw();
+		  GAME.startButton.draw();
+		  if (GAME.startButton.dead)GAME.state = 'main'
 		break;
 		case 'main':
 		  GAME.currentLevel.player.update();
@@ -787,9 +812,9 @@ function main(){
 
   //horizontal black bars
   drawBox(-C_OFFSET_X,0,WINDOW_W,-C_OFFSET_Y,'black');
-  drawBox(-C_OFFSET_X,C_HEIGHT,WINDOW_W,C_OFFSET_Y,'black');
+  drawBox(-C_OFFSET_X,C_HEIGHT,WINDOW_W,C_OFFSET_Y*2,'black');
   //vertical black bars
-  drawBox(C_WIDTH,0,C_OFFSET_X,C_HEIGHT,'black');
+  drawBox(C_WIDTH,0,C_OFFSET_X*2,C_HEIGHT,'black');
   drawBox(0,0,-C_OFFSET_X,C_HEIGHT,'black');
 
   swipeControl.swipeDir[0] = 0;

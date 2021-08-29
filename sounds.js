@@ -1,12 +1,13 @@
 var activated_soundFX = true;
 
 class SoundFX{
-  constructor(src){
+  constructor(src,loop = 0){
 	this.sound = document.createElement('audio');
 	this.sound.src = src;
 	this.sound.preload = "auto";
  	this.sound.controls =  "none";
  	this.sound.style.display = "none";
+	this.sound.loop = loop;
   }
   play(){
 	if(!activated_soundFX)return
@@ -27,12 +28,13 @@ teleport:'Randomize',
 tile0	:'j3',
 tile1	:'j4',
 jomp0	:'j5',
-jomp1	:'j6'	
+jomp1	:'j6',	
 }
 
 for (let n in s){
 s[n] = new SoundFX('sounds/' + s[n] + '.wav')	
 }
+s.music = new SoundFX('sounds/music.mp3',1)
 
 return s
 })()
