@@ -230,6 +230,9 @@ template:[
 
 class Level{
   constructor(pattern){
+	this.score = 0;
+	this.clear = 0;
+	this.cloud = new Cloud();
 	this.tiles = [];
 	this.tileIndex = new Array(GRID_COUNT^2);
 	this.walls = [];
@@ -274,6 +277,17 @@ class Level{
 	}
 	
   }
+  update(){
+	this.player.update();
+	
+	if (this.cloud.dead){
+		if (this.player.dead == 2) this.clear = 1;
+		else this.reset()
+	}
+	else if (this.score >= this.tileCount && !this.player.dead){
+		this.player.dead = 2;
+	}
+  }
   draw(){
 	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,1,COLORS.grey2))
 	this.tiles.forEach(tile => tile.draw(this.flash))
@@ -283,15 +297,20 @@ class Level{
 	this.walls.forEach(wall => wall.draw());
 	this.player.draw();
 	this.flash.cycleAlpha();
+	if (this.player.dead) this.cloud.draw(this.player.trueX()-4,this.player.trueY()-4)
   }
   reset(shrinkReset = 0){
+	this.clear = 0;
+	this.score = 0;
+	this.cloud.dead = 0;
 	this.tiles.forEach(tile => {
 		if (shrinkReset && tile.breakReset!=0)tile.shrink = 0;
 		tile.breakCount = tile.breakReset;
 	});
 	this.player.setPos(this.start[0],this.start[1]);
+	this.player.sprite.setFrame(0);
 	this.player.state = 'dead';
-	this.player.jump = GRID_SIZE;
+	this.player.jump = GRID_SIZE*2;
 	this.player.dead = 0;
   }
 }
@@ -422,20 +441,26 @@ class Cloud{
 		5:[
 		this.colors[1],
 		[0,0,1,16],[0,0,16,1],[15,0,1,16],[0,15,16,1]
-		]
+		],
+		6:[]
 	}
   }
   draw(x,y){
 	const frame = this.frames[this.frameNum];
-	for(let i=1; i<frame.length; i++ ){
-	drawBox(x+frame[i][0],y+frame[i][1],frame[i][2],frame[i][3],frame[0]);
+	if (this.frameNum > 5) {
+		if (this.time > 16){
+			this.time = 0;
+		    this.frameNum = 0;
+		    this.dead = 1; 
+		}
 	}
-	if(this.time > 4){
-		this.time = 0
-		this.frameNum++
-		if (this.frameNum > 5) {
-		  this.frameNum = 0;
-		  this.dead = 1; 
+	else{
+		for(let i=1; i<frame.length; i++ ){
+		  drawBox(x+frame[i][0],y+frame[i][1],frame[i][2],frame[i][3],frame[0]);
+		}
+		if(this.time > 4){
+			this.time = 0;
+			this.frameNum++;
 		}
 	}
 	this.time++;
@@ -459,6 +484,9 @@ class Flash{
   }
   reduceAlpha(){
 	this.alpha -= this.inc;
+  }
+  increaseAlpha(){
+	  this.alpha += this.inc;
   }
   cycleAlpha(){
 	this.alpha += this.inc * this.dir;
@@ -591,7 +619,7 @@ class Froggy{
 	this.h = 3;
 	this.sprite = new Sprite(SPRITES.frog,COLOR_SETS.frog);
 	this.speedX = this.speedY = 0;
-	this.jump = GRID_SIZE;
+	this.jump = GRID_SIZE*2;
 	this.flash = new Flash();
 	this.state = 'dead'; //'idle', 'walking', 'dead'
 	this.dead = 0;
@@ -635,16 +663,15 @@ class Froggy{
 		  if (newPos != this.gridPos){
 		    if(OBJ=GAME.checkTile(this.gridPos)){
 		    	OBJ.breakCount--;
-			GAME.score++;
+				GAME.currentLevel.score++;
 		    }
 		    this.gridPos = newPos;
 		    if(OBJ=GAME.checkTile(this.gridPos)){
-			if(OBJ.breakCount <= 0){
-			  SOUNDS.explode.play();
-			  this.dead = 1;
-			  GAME.reset = 1;
-			  break;
-			}
+			  if(OBJ.breakCount <= 0){
+			    SOUNDS.explode.play();
+			    this.dead = 1;
+			    break;
+			  }
 		    }
 		    this.flash.alpha = 1;
 		    this.playJumpSound();
@@ -658,9 +685,11 @@ class Froggy{
   }
   draw(){
 	if (this.dead)return
-	drawBox(this.x - 2, this.y + 2, this.w + 3, 2,COLORS.black2)
-	this.sprite.updateFrame()
-	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)
+	if(!this.jump)this.sprite.updateFrame()
+	const shadX = Math.ceil(this.jump/5)
+	const shadW = (3 - shadX*2)
+	drawBox(this.x - 2 + shadX, this.y + 2, this.w + shadW, 2,COLORS.black2)				//shadow
+	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)	//frog
 	
 	//drawBox(this.x,this.y,this.w,this.h,'red')
   }
@@ -725,8 +754,6 @@ class GameControl{
 	this.levelNum = 0;
 	this.currentLevel = this.levels[this.levelNum];
 	this.state = 'start_menu';
-	this.score = 0;
-	this.cloud = new Cloud();
 	this.BG = new GameBackground();
 	this.startButton = new StartFrog();
   }
@@ -738,9 +765,7 @@ class GameControl{
 		return tile;
 	}
   }
-  addScore(){
-	this.score++;
-  }
+
   gotoNextLevel(){
 	this.levelNum++;
 	if(this.levelNum > this.levelsMax) {
@@ -751,33 +776,6 @@ class GameControl{
 		this.levels.forEach(level => {level.reset(1)})
 	}
 	this.currentLevel = this.levels[this.levelNum];
-  }
-  checkScore(){
-	if (this.score >= this.currentLevel.tileCount) {
-		if (!this.currentLevel.player.dead)SOUNDS.teleport.play();
-		this.currentLevel.player.dead = 1;
-		
-		this.score = 0;
-	}
-  }
-  checkNextLevel(){
-	if(this.reset){
-	  this.currentLevel.reset();
-	  this.score = 0;
-	  this.cloud.dead = 0;
-	  this.reset = 0;
-	}
-	else {
-	  this.gotoNextLevel()
-	  this.score = 0;
-	  this.cloud.dead = 0;
-	}
-	
-  }
-  drawCloud(){
-	const player = this.currentLevel.player;
-	if (player.dead)
-	this.cloud.draw(player.trueX()-4,player.trueY()-4)
   }
 }
 
@@ -798,13 +796,12 @@ function main(){
 		  GAME.startButton.draw();
 		  if (GAME.startButton.dead)GAME.state = 'main'
 		break;
-		case 'main':
-		  GAME.currentLevel.player.update();
+		
+		case 'main':  
+		  GAME.currentLevel.update();
 		  GAME.currentLevel.draw();
-		  GAME.checkScore();
-		  GAME.drawCloud();
-		  if(GAME.cloud.dead){
-		    GAME.checkNextLevel();
+		  if(GAME.currentLevel.clear){
+			GAME.gotoNextLevel();
 		  }
 		break;
 
