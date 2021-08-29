@@ -793,8 +793,8 @@ function main(){
 
 	switch (GAME.state){
 		case 'start_menu':
-		  GAME.startButton.update();
 		  GAME.BG.draw();
+		  GAME.startButton.update();
 		  GAME.startButton.draw();
 		  if (GAME.startButton.dead)GAME.state = 'main'
 		break;
