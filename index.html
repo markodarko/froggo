@@ -285,7 +285,9 @@ class Level{
 		else this.reset()
 	}
 	else if (this.score >= this.tileCount && !this.player.dead){
+		SOUNDS.teleport.play();
 		this.player.dead = 2;
+		this.score = 0;
 	}
   }
   draw(){
