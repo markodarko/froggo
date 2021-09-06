@@ -109,7 +109,7 @@ function collideCheck(obj1,obj2,dx=0,dy=0){
 }
 
 const LEVEL_DAT = {
-total:9,
+total:11,
 	//s = start
 	//f = finish
 	//- = blank space
@@ -185,16 +185,27 @@ template:[
 
 5:[
   '---####-',
-  '--#s...#',
-  '###....#',
-  '#..g..=-',
+  '--#....#',
+  '###..s.#',
+  '#.....=-',
   '#.w.w.#-',
   '#.....#-',
-  '-=....#-',
+  '-=.g..#-',
   '--====--'
   ],
-
+  
 6:[
+  '-######-',
+  '#......#',
+  '#.ww...#',
+  '#......#',
+  '#....s.#',
+  '#.ww...#',
+  '#.....g#',
+  '-======-'
+  ],
+
+7:[
   '--####--',
   '-#...g#-',
   '##.....#',
@@ -205,7 +216,7 @@ template:[
   '--===---'
   ],
 
-7:[
+8:[
   '-#.##.#-',
   '#..s...#',
   '#......#',
@@ -216,7 +227,7 @@ template:[
   '-=.==.=-'
   ],
 
-8:[
+9:[
   '-######-',
   '#......#',
   '#.wggw.#',
@@ -225,6 +236,16 @@ template:[
   '#..w...#',
   '-L.....#',
   '-======-'
+  ],
+ 10:[
+  '--------',
+  '-wwwwww-',
+  'wwwwwwww',
+  'ws....gw',
+  'wwwwwwww',
+  '-wwwwww-',
+  '--------',
+  '--------'
   ]
 }
 
@@ -468,7 +489,6 @@ class Cloud{
 	this.time++;
   }
 }
-
 
 class Flash{
   constructor(color = COLORS.white1,inc=.1){
@@ -744,7 +764,6 @@ class Froggy{
   	return this.trueY() + this.trueX()/GRID_SIZE
   }
 }
-
 
 class GameControl{
   constructor(){
