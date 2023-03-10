@@ -6,7 +6,7 @@
 <style>
 canvas {
 	display:block;
-	background:#1b193a;
+	background:#11101a;
 	user-select:none;
 }
 *{
@@ -30,8 +30,8 @@ var canvas = document.getElementById('gamewindow');
 var ctx = canvas.getContext('2d'); 
 
 const 	GRID_SIZE = 8,
-	GRID_COUNT = 8,
-	C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
+		GRID_COUNT = 8,
+		C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
 
 //canvas.height = window.innerHeight;
 //canvas.width = window.innerWidth;
@@ -255,11 +255,11 @@ class Level{
 	this.clear = 0;
 	this.cloud = new Cloud();
 	this.tiles = [];
-	this.tileIndex = new Array(GRID_COUNT^2);
+	this.tileIndex = new Array(GRID_COUNT*GRID_COUNT);
 	this.walls = [];
 	this.goal = [];
 	this.shadow = [];
-	this.flash = new Flash(COLORS.orange2,.01);
+	this.flash = new Flash(COLOR_SETS.lava[1],.01);
 	this.tileCount = 0;
 	for(let row = 0; row < pattern.length; row++){
 	for(let col = 0; col < pattern[0].length; col++){
@@ -276,13 +276,18 @@ class Level{
 			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
 		  	break;
 		  case 'g':
-			this.goal.push(new Goal(col,row));
+			this.tiles.push(new Goal(col,row));
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+			//this.goal.push(new Goal(col,row));
+			this.shadow.push([gridx,gridy+7,COLORS.grey3])
 		 	break;
 		  case 'w':
 			this.walls.push(new Wall(col,row));
+			this.shadow.push([gridx,gridy+7,COLORS.grey3])
 		  	break;
 		  case '=':
-			this.shadow.push([gridx,gridy])
+			this.shadow.push([gridx,gridy,COLORS.grey4])
+			this.shadow.push([gridx,gridy+1,COLORS.grey5])
 		  case '#':
 			this.walls.push(new Wall(col,row,false));
 		  	break;
@@ -294,6 +299,7 @@ class Level{
 	}
 	}
 	for(let i = 0; i < this.tiles.length; i++ ){
+		if(this.tiles[i].breakCount != 'infinite')
 		this.tileCount += this.tiles[i].breakCount;
 	}
 	
@@ -312,13 +318,15 @@ class Level{
 	}
   }
   draw(){
-	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,1,COLORS.grey2))
+	this.shadow.forEach(s => drawBox(s[0],s[1],GRID_SIZE,1,s[2]))
 	this.tiles.forEach(tile => tile.draw(this.flash))
-	this.goal.forEach(goal => goal.draw());
+	
+	//this.goal.forEach(goal => goal.draw());
 	this.player.drawFlash();
 	this.player.flash.reduceAlpha();
 	this.walls.forEach(wall => wall.draw());
 	this.player.draw();
+	
 	this.flash.cycleAlpha();
 	if (this.player.dead) this.cloud.draw(this.player.trueX()-4,this.player.trueY()-4)
   }
@@ -329,6 +337,7 @@ class Level{
 	this.tiles.forEach(tile => {
 		if (shrinkReset && tile.breakReset!=0)tile.shrink = 0;
 		tile.breakCount = tile.breakReset;
+		tile.pressed = 0;
 	});
 	this.player.setPos(this.start[0],this.start[1]);
 	this.player.sprite.setFrame(0);
@@ -437,7 +446,7 @@ class Block {
 class Cloud{
   constructor(){
 	this.dead = 0;
-	this.colors = [COLORS.white1,COLORS.whiteG]
+	this.colors = COLOR_SETS.cloud
 	this.frameNum = 0;
 	this.time = 0;
 	this.frames = {
@@ -469,6 +478,7 @@ class Cloud{
 	}
   }
   draw(x,y){
+	if (this.dead) return;
 	const frame = this.frames[this.frameNum];
 	if (this.frameNum > 5) {
 		if (this.time > 16){
@@ -527,35 +537,36 @@ class Flash{
 class Goal extends Block{
   constructor(x,y){
 	super(x,y);
-	this.y -= 1;
+	this.breakReset = this.breakCount = 'infinite'
+	this.pressed = 0;
 	this.h += 1;
-	this.detail = 	[	[this.x+1,this.y,this.w-2,this.h-1,COLORS.yellow1],
-				[this.x,this.y+1,this.w,this.h-3,COLORS.yellow1],
-				[this.x,this.y+this.h,this.w,-1,COLORS.orange3]
-			]
+	this.colors = COLOR_SETS.goal
 	
   }
   draw(){
-  	super.draw(COLORS.orange1)
-	this.detail.forEach(d=>drawBox(d[0],d[1],d[2],d[3],d[4]))
+	  const tilePressOffset = (this.pressed - 1)*2;
+	  drawBox(this.x,this.y+tilePressOffset,this.w,this.h,this.colors[0])
+	  drawBox(this.x,this.y+tilePressOffset+this.h,this.w,-1,this.colors[1])
   }
 }
 
 class Wall extends Block{
   constructor(x,y,visible = true){
 	super(x,y);
-	this.y -= 1;
+	this.y -= 2;
 	this.h += 1;
 	this.visible = visible;
 	this.flash = new Flash();
+	this.color = COLOR_SETS.wall;
 	this.makeDots()
 	
   }
   draw(){
 	if(!this.visible)return;
-	super.draw(COLORS.grey2);
+	//super.draw(this.color[0]);
+	drawBox(this.x,this.y,this.w,this.h,this.color[0])
 	this.dots.forEach(dot => drawBox(dot.x,dot.y,1,1,dot.color))
-	drawBox(this.x,this.y+this.h,this.w,-3,COLORS.black1)
+	drawBox(this.x,this.y+this.h,this.w,-3,this.color[3])
 	this.flash.draw(this.x,this.y,this.w,this.h);
 	this.flash.reduceAlpha();
   }
@@ -566,8 +577,8 @@ class Wall extends Block{
 		if(this.dots.length == 8)return
 		const num = randINT(100);
 		if (num > 20) continue;
-		var color = COLORS.grey1;
-		if (num <=10) color = COLORS.black1;
+		var color = this.color[1];
+		if (num <=10) color = this.color[2];
 		this.dots.push({x:col+this.x,y:row+this.y, color:color})
 		col++;
 	}
@@ -582,6 +593,7 @@ class Tile extends Block{
 	if (count == 0)this.shrink = this.w;
 	else
 	this.shrink = 0;
+	this.pressed = 0;
 	this.setColor(x+y);
 	this.makeDots();
   }
@@ -590,19 +602,22 @@ class Tile extends Block{
 	else this.shrink = Math.max(this.shrink - 1 ,0);
 
 	if (this.shrink > 0){
-		super.draw(COLORS.orange1);
+		super.draw(COLOR_SETS.lava[0]);
 		flash.draw(this.x,this.y);
 		this.dots.forEach(dot => this.drawDot(dot));
 		
 	}
-	if (this.shrink<this.w)
-	drawBox(this.x+this.shrink/2,this.y+this.shrink/2,this.w-this.shrink,this.h-this.shrink,this.color);
+	if (this.shrink<this.w){
+		const tilePressOffset = this.pressed - 1;
+		drawBox(this.x+this.shrink/2,this.y+this.shrink/2,this.w-this.shrink,this.h-this.shrink,this.color2); //tile shadow
+		drawBox(this.x+this.shrink/2,this.y+tilePressOffset+this.shrink/2,this.w-this.shrink,this.h-this.shrink,this.color); //tile
+    }
   }
  
   drawDot(dot){
 	ctx.save();
 	ctx.globalAlpha = dot.alpha;
-	drawBox(this.x+dot.x,this.y+dot.y,1,1,COLORS.whiteR)
+	drawBox(this.x+dot.x,this.y+dot.y,1,1,COLOR_SETS.lava[2])
 	dot.alpha +=.01*dot.dir;
 	if (dot.alpha<0){
 		dot.alpha = 0;
@@ -625,8 +640,9 @@ class Tile extends Block{
 	}
   }
   setColor(num){
-	if (num%2 == 0)this.color = COLORS.blue1;
-	else this.color = COLORS.blue2;
+	this.color2 = COLOR_SETS.tile[2]
+	if (num%2 == 0)this.color = COLOR_SETS.tile[0];
+	else this.color = COLOR_SETS.tile[1];
   }
  
 }
@@ -636,9 +652,10 @@ class Froggy{
 	this.jumpSound = 0;
 	this.offsetX = 2;
 	this.offsetY = 2;
+	this.drawOffsetY = 5
 	this.setPos(x,y);
 	this.w = 4;
-	this.h = 3;
+	this.h = 2;
 	this.sprite = new Sprite(SPRITES.frog,COLOR_SETS.frog);
 	this.speedX = this.speedY = 0;
 	this.jump = GRID_SIZE*2;
@@ -684,16 +701,20 @@ class Froggy{
 		  const newPos = this.getGridPos()
 		  if (newPos != this.gridPos){
 		    if(OBJ=GAME.checkTile(this.gridPos)){
-		    	OBJ.breakCount--;
-				GAME.currentLevel.score++;
+				if (OBJ.breakCount != 'infinite'){
+					OBJ.breakCount--;
+					GAME.currentLevel.score++;
+				}else OBJ.pressed = 0
 		    }
 		    this.gridPos = newPos;
 		    if(OBJ=GAME.checkTile(this.gridPos)){
+			  //if(OBJ.breakCount =='inifinite') OBJ.pressed = 1
 			  if(OBJ.breakCount <= 0){
 			    SOUNDS.explode.play();
 			    this.dead = 1;
 			    break;
 			  }
+			  else OBJ.pressed = 1
 		    }
 		    this.flash.alpha = 1;
 		    this.playJumpSound();
@@ -710,10 +731,10 @@ class Froggy{
 	if(!this.jump)this.sprite.updateFrame()
 	const shadX = Math.ceil(this.jump/5)
 	const shadW = (3 - shadX*2)
-	drawBox(this.x - 2 + shadX, this.y + 2, this.w + shadW, 2,COLORS.black2)				//shadow
-	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.offsetY-this.jump)	//frog
+	drawBox(this.x - 2 + shadX, this.y, this.w + shadW, 2,COLORS.black2)		//shadow
+	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.drawOffsetY-this.jump)	//frog
 	
-	//drawBox(this.x,this.y,this.w,this.h,'red')
+	//drawBox(this.x,this.y,this.w,this.h,'red') // hitbox test
   }
   playJumpSound(){
 	SOUNDS['tile' + this.jumpSound].play()

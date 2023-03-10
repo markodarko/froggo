@@ -43,7 +43,7 @@ class Starfield{
 class GameBackground{
 	constructor(){
 		this.time = 0;
-		this.starColor = ['white',COLORS.yellow1,COLORS.orange1,COLORS.green0,COLORS.whiteG]  //['#00e8d8','#a4effc','white','#d8f878'];
+		this.starColor = COLOR_SETS.stars //['#00e8d8','#a4effc','white','#d8f878'];
 		this.starfields = 
 		[
 			new Starfield(6,2,.5),
