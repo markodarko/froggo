@@ -344,12 +344,12 @@ class Level{
 	this.player.state = 'dead';
 	this.player.jump = GRID_SIZE*2;
 	this.player.dead = 0;
+	this.player.sprite.swapImg(SPRITES.frogR) ;
   }
 }
 
 const SPRITES={
-frog:
-[
+frogR:[
   [
   '........',
   '........',
@@ -389,6 +389,49 @@ frog:
   '.111333.',
   '.211333.',
   '.113333.'
+  ]
+],
+
+frogL:[
+  [ 
+  '........',
+  '........',
+  '.0101...',
+  '.11111..',
+  '.33312..',
+  '.333111.',
+  '.333112.',
+  '.333311.'
+  ],
+  [
+  '........',
+  '........',
+  '........',
+  '.0101...',
+  '.11111..',
+  '.333112.',
+  '33333112',
+  '33333311' 
+  ],
+  [ 
+  '........',
+  '........',
+  '.0101...',
+  '.11111..',
+  '.33312..',
+  '.333111.',
+  '.333112.',
+  '.333311.'
+  ],
+  [
+  '........',
+  '.0101...',
+  '.11111..',
+  '.44411..',
+  '.33312..',
+  '.333111.',
+  '.333112.',
+  '.333311.'
   ]
 ]
 }
@@ -656,7 +699,7 @@ class Froggy{
 	this.setPos(x,y);
 	this.w = 4;
 	this.h = 2;
-	this.sprite = new Sprite(SPRITES.frog,COLOR_SETS.frog);
+	this.sprite = new Sprite(SPRITES.frogR,COLOR_SETS.frog);
 	this.speedX = this.speedY = 0;
 	this.jump = GRID_SIZE*2;
 	this.flash = new Flash();
@@ -671,11 +714,14 @@ class Froggy{
 		this.jump--;
 		if (this.jump < 1){
 		  this.state = 'idle'
-		 // this.playJumpSound()
+		  GAME.checkTile(this.gridPos).pressed=1
+		  this.flash.alpha = 1
+		  this.playJumpSound()
 		}
 	  break;	
 	  case 'idle':
 		if(this.checkInputs() && this.flash.alpha <= 0){
+		  this.setDirection()
 		  this.jump = 3;
 		  this.sprite.setFrame(2);
 		  this.state = 'walking';
@@ -735,6 +781,10 @@ class Froggy{
 	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.drawOffsetY-this.jump)	//frog
 	
 	//drawBox(this.x,this.y,this.w,this.h,'red') // hitbox test
+  }
+  setDirection(){
+	  if (this.speedX >0) this.sprite.swapImg(SPRITES.frogR)
+		  else if (this.speedX < 0) this.sprite.swapImg(SPRITES.frogL)
   }
   playJumpSound(){
 	SOUNDS['tile' + this.jumpSound].play()

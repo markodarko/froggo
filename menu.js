@@ -4,7 +4,7 @@ class StartFrog{
 	this.w = this.h = GRID_SIZE*2;
 	this.offsetX = Math.floor(this.w/4)
 	this.offsetY = Math.floor(this.h/4)
-	this.sprite = new Sprite(SPRITES.frog,COLOR_SETS.frog);
+	this.sprite = new Sprite(SPRITES.frogR,COLOR_SETS.frog);
 	this.floatMax = 1;
 	
   }
