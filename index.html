@@ -257,6 +257,7 @@ class Level{
 	this.tiles = [];
 	this.tileIndex = new Array(GRID_COUNT*GRID_COUNT);
 	this.walls = [];
+	this.grabWalls = [];
 	this.goal = [];
 	this.shadow = [];
 	this.flash = new Flash(COLOR_SETS.lava[1],.01);
@@ -282,7 +283,7 @@ class Level{
 			this.shadow.push([gridx,gridy+7,COLORS.grey3])
 		 	break;
 		  case 'w':
-			this.walls.push(new Wall(col,row));
+			this.grabWalls.push(new Wall(col,row));
 			this.shadow.push([gridx,gridy+7,COLORS.grey3])
 		  	break;
 		  case '=':
@@ -302,6 +303,7 @@ class Level{
 		if(this.tiles[i].breakCount != 'infinite')
 		this.tileCount += this.tiles[i].breakCount;
 	}
+	this.walls = [...this.walls,...this.grabWalls]
 	
   }
   update(){
@@ -344,11 +346,36 @@ class Level{
 	this.player.state = 'dead';
 	this.player.jump = GRID_SIZE*2;
 	this.player.dead = 0;
+	this.player.direction = 1;
 	this.player.sprite.swapImg(SPRITES.frogR) ;
   }
 }
 
 const SPRITES={
+frogTR:[
+  [
+  '........',
+  '........',
+  '...1010.',
+  '..11111.',
+  '..11444.',
+  '.121444.',
+  '.211333.',
+  '.113333.'
+  ]
+],
+frogTL:[
+  [
+  '........',
+  '........',
+  '.0101...',
+  '.11111..',
+  '.44411..',
+  '.44412..',
+  '.333112.',
+  '.333311.'
+  ]
+],
 frogR:[
   [
   '........',
@@ -391,7 +418,7 @@ frogR:[
   '.113333.'
   ]
 ],
-
+ 
 frogL:[
   [ 
   '........',
@@ -692,7 +719,10 @@ class Tile extends Block{
 
 class Froggy{
   constructor(x,y){
+	this.bumped = 0;
 	this.jumpSound = 0;
+	this.direction = 1
+	this.setTongue();
 	this.offsetX = 2;
 	this.offsetY = 2;
 	this.drawOffsetY = 5
@@ -712,7 +742,7 @@ class Froggy{
 	switch (this.state){
 	  case 'dead':
 		this.jump--;
-		if (this.jump < 1){
+		if (this.jump < 1){	
 		  this.state = 'idle'
 		  GAME.checkTile(this.gridPos).pressed=1
 		  this.flash.alpha = 1
@@ -720,6 +750,8 @@ class Froggy{
 		}
 	  break;	
 	  case 'idle':
+		if (swipeControl.tapped) this.shootTongue()
+		else
 		if(this.checkInputs() && this.flash.alpha <= 0){
 		  this.setDirection()
 		  this.jump = 3;
@@ -728,18 +760,51 @@ class Froggy{
 		 // this.playJumpSound();
 		}
 	  break;
+	  case 'tongueExtend':
+		var dx = this.direction * 2;
+		this.tongue.L += dx;
+		this.tongue.x += dx;
+		if (this.tongue.x > C_WIDTH || this.tongue.x < 0) this.state = 'tongueReturn';
+		else if(collideCheck(this.tongue,GAME.currentLevel.grabWalls)) {
+			this.state = 'teleport';
+		}
+	  break;
+	  case 'tongueReturn':
+		var dx = 2;
+		this.tongue.L = toZero(this.tongue.L,dx);
+		this.tongue.x -= this.direction * dx;
+		if (this.tongue.L == 0){
+			this.setSpriteDir();
+			this.state = 'idle';
+		}
+	  break;
+	  case 'teleport':
+			var dx = this.direction * 2
+			this.x += dx;
+			this.tongue.L -= dx;
+			if (Math.abs(this.tongue.L) <=0){
+				this.tongue.L = 0
+				this.setSpriteDir();
+				this.state = 'walking'
+				this.speedX = this.direction;
+			}
+	  break;
 	  case 'walking':
 		this.x += this.speedX;
 		this.y += this.speedY;
-		if(OBJ = collideCheck(this,GAME.currentLevel.walls)){
+		if (this.bumped == 0){
+		  if(OBJ = collideCheck(this,GAME.currentLevel.walls)){
+			this.bumped = 1;
 			this.reverseDirection();
 			SOUNDS.bounce.play();
 			OBJ.flash.alpha = 1;
+		  }
 		}
+		
 		this.screenWrapCheck();
 
 		if(this.gridCheck()){
-		  
+		  this.bumped = 0;
 		  this.stopMove();
 		  this.sprite.setFrame(1);
 		  this.jump = 0;
@@ -777,14 +842,24 @@ class Froggy{
 	if(!this.jump)this.sprite.updateFrame()
 	const shadX = Math.ceil(this.jump/5)
 	const shadW = (3 - shadX*2)
-	drawBox(this.x - 2 + shadX, this.y, this.w + shadW, 2,COLORS.black2)		//shadow
+	drawBox(this.x - 2 + shadX, this.y, this.w + shadW, 2,COLOR_SETS.frog[4])		//shadow
 	this.sprite.draw(this.x-this.offsetX,this.y-this.h-this.drawOffsetY-this.jump)	//frog
 	
+	if (this.tongue.L != 0){
+		drawBox(this.x+this.offsetX, this.tongue.y, this.tongue.L, 1,COLORS.tongue) // tongue line
+		drawBox(this.tongue.x, this.tongue.y+1, 2, -2,COLORS.tongue) //tongue end
+	}
 	//drawBox(this.x,this.y,this.w,this.h,'red') // hitbox test
   }
   setDirection(){
-	  if (this.speedX >0) this.sprite.swapImg(SPRITES.frogR)
-		  else if (this.speedX < 0) this.sprite.swapImg(SPRITES.frogL)
+	  if (this.speedX >0) {
+		  this.direction = 1
+		  this.sprite.swapImg(SPRITES.frogR)
+	  }
+	  else if (this.speedX < 0){
+		  this.direction = -1
+		  this.sprite.swapImg(SPRITES.frogL)
+	  }
   }
   playJumpSound(){
 	SOUNDS['tile' + this.jumpSound].play()
@@ -793,6 +868,25 @@ class Froggy{
   drawFlash(){
 	this.flash.draw(this.trueX(),this.trueY())
   }
+  shootTongue(){
+	this.state='tongueExtend';
+	if (this.direction == 1)	this.sprite.swapImg(SPRITES.frogTR);
+	else 						this.sprite.swapImg(SPRITES.frogTL);
+	this.tongue.x = this.x + this.offsetX;
+	this.tongue.y = this.trueY();
+  }
+  setSpriteDir(){
+	if (this.direction == 1)	this.sprite.swapImg(SPRITES.frogR)
+	else						this.sprite.swapImg(SPRITES.frogL)
+  }
+  setTongue(){	 
+	this.tongue = {};
+	this.tongue.L=0;
+	this.tongue.x=this.x;
+	this.tongue.y=this.y;   //   poooooooooooooooo
+	this.tongue.w=2;
+	this.tongue.h=2;
+  }
   setPos(x,y){
 	this.x = x+this.offsetX;
 	this.y = y+this.offsetY;
@@ -800,7 +894,7 @@ class Froggy{
   }
   gridCheck(){
 	const 	X = (this.x-this.offsetX) % GRID_SIZE,
-		Y = (this.y-this.offsetY) % GRID_SIZE;
+			Y = (this.y-this.offsetY) % GRID_SIZE;
 	if (X == 0 && Y == 0) return true;
   }
   screenWrapCheck(){
@@ -811,10 +905,10 @@ class Froggy{
 	else return 1;
   }
   checkInputs(){
-	this.speedX = controller_keys['ArrowRight'] - controller_keys['ArrowLeft'] + swipeControl.swipeDir[0];
+	this.speedX = controller_keys['ArrowRight'] - controller_keys['ArrowLeft'] || swipeControl.swipeDir[0];
 	this.speedY = 0;
 	if (this.speedX != 0) return true;
-	this.speedY = controller_keys['ArrowDown'] - controller_keys['ArrowUp'] + swipeControl.swipeDir[1];
+	this.speedY = controller_keys['ArrowDown'] - controller_keys['ArrowUp'] || swipeControl.swipeDir[1];
 	if (this.speedY != 0) return true;
   }
   trueX(){
@@ -908,6 +1002,7 @@ function main(){
 
   swipeControl.swipeDir[0] = 0;
   swipeControl.swipeDir[1] = 0;
+  swipeControl.tapped = 0;
 }
 var GAME = new GameControl();
 main();

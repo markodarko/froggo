@@ -1,6 +1,6 @@
 var controller_keys = {
   ArrowLeft	:0,
-  ArrowRight	:0,
+  ArrowRight:0,
   ArrowUp 	:0,
   ArrowDown	:0
 }
@@ -18,6 +18,7 @@ document.addEventListener('keyup',(e)=>{
 var swipeControl = {
   swipeDir:	[0,0],
   coord:	{x0:null,y0:null},
+  tapped: 0,
   endTouch:	{x:0,y:0},
   time:		null,
   press: 	function(e){
@@ -32,6 +33,8 @@ var swipeControl = {
 		  let x = e.changedTouches[0].clientX,
 		      y = e.changedTouches[0].clientY,
 		      t = e.timeStamp-c.time;
+		  if (t<100) c.tapped = 1;
+		  else
 		  if (t<400){
 		  	if      (x-c.coord.x0 >  dist) c.swipeDir = [1, 0];
 			else if (x-c.coord.x0 < -dist) c.swipeDir = [-1, 0];

@@ -4,3 +4,10 @@ function randomINT(num){
 function cycleArray(array){
 	array.push(array.shift())
 }
+
+function toZero(number, decay) {
+    const sign = Math.sign(number);
+    number = Math.abs(number);
+    number = Math.max(number - decay, 0);
+    return number * sign;
+  }

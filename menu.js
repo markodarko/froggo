@@ -19,9 +19,10 @@ class StartFrog{
 		this.speed = Math.min(this.speed+.2, 3)
 		return;
 	}
-	if(collidePointCheck(swipeControl.endTouch,this)){
+	else if(collidePointCheck(swipeControl.endTouch,this)){
 		this.start_pressed = 1 ;
 		this.speed = -1.5;
+		GAME.BG.warp();
 	}
 	
 	this.time++;

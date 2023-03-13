@@ -2,8 +2,9 @@ class Starfield{
   constructor(count,size,speed,vertical = true){
 	this.stars = [];
 	this.size = size;
-	this.speed = speed;
+	this.speed = this.baseSpeed = speed;
 	this.maxSpeed = speed;
+	this.acceleration = .5
 	this.vertical = vertical;
 	this.width = C_WIDTH;
 	this.height = C_HEIGHT;
@@ -17,7 +18,7 @@ class Starfield{
   }
   drawAndMoveStars(){
 	var position,bounds,w = this.size,h = this.size;
-	var warp = Math.max(0,this.speed-10) * 4;
+	var warp = Math.max(0,this.speed-1) * 4;
 	
 	if (this.vertical){
 		position = 1; h += warp; bounds = this.height;
@@ -33,9 +34,9 @@ class Starfield{
   }
 	checkSpeed(){
 		if(this.speed < this.maxSpeed){
-			this.speed = Math.min(this.speed + .5, this.maxSpeed)
+			this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed)
 		}else if (this.speed > this.maxSpeed){
-			this.speed = Math.max(this.speed - .5, this.maxSpeed)
+			this.speed = Math.max(this.speed - this.acceleration, this.maxSpeed)
 		}
 	}
 }
@@ -44,6 +45,8 @@ class GameBackground{
 	constructor(){
 		this.time = 0;
 		this.starColor = COLOR_SETS.stars //['#00e8d8','#a4effc','white','#d8f878'];
+		this.colorMax = this.starColor.length-1;
+		this.colorIndex = 0;
 		this.starfields = 
 		[
 			new Starfield(6,2,.5),
@@ -55,11 +58,23 @@ class GameBackground{
 		
 		if (this.time > 15){
 			this.time = 0
-			cycleArray(this.starColor)
+			this.colorIndex = (this.colorIndex + 1) % this.colorMax
 		}
 		this.time++
-		ctx.fillStyle = this.starColor[0];
+		ctx.fillStyle = this.starColor[this.colorIndex];
 		this.starfields[0].draw();
 		this.starfields[1].draw();
+	}
+	warp(){
+		this.starfields.forEach(field => {
+			field.maxSpeed = field.speed * 5
+			
+		})
+	}
+	unwarp(){
+		this.starfields.forEach(field => {
+			field.maxSpeed = field.baseSpeed;
+			
+		})
 	}
 }
