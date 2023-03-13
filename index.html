@@ -959,6 +959,7 @@ class GameControl{
 	if(this.levelNum > this.levelsMax) {
 		this.startButton.reset();
 		this.state = 'start_menu';
+		this.BG.unwarp();
 		swipeControl.endTouch.x = swipeControl.endTouch.y = 0;
 		this.levelNum = 0;
 		this.levels.forEach(level => {level.reset(1)})

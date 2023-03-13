@@ -73,7 +73,7 @@ class GameBackground{
 	}
 	unwarp(){
 		this.starfields.forEach(field => {
-			field.maxSpeed = field.baseSpeed;
+			field.speed = field.maxSpeed = field.baseSpeed;
 			
 		})
 	}
