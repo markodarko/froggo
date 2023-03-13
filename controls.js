@@ -28,7 +28,7 @@ var swipeControl = {
 		  c.time = e.timeStamp;
 		},
   release:	function(e){
-		  let dist = 50;
+		  let dist = 20;
 		  let c = swipeControl; 
 		  let x = e.changedTouches[0].clientX,
 		      y = e.changedTouches[0].clientY,
