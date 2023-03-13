@@ -750,7 +750,10 @@ class Froggy{
 		}
 	  break;	
 	  case 'idle':
-		if (swipeControl.tapped) this.shootTongue()
+		if (swipeControl.tapped) {
+			this.shootTongue();
+			swipeControl.tapped = 0;
+		}
 		else
 		if(this.checkInputs() && this.flash.alpha <= 0){
 		  this.setDirection()
@@ -980,7 +983,10 @@ function main(){
 		  GAME.BG.draw();
 		  GAME.startButton.update();
 		  GAME.startButton.draw();
-		  if (GAME.startButton.dead)GAME.state = 'main'
+		  if (GAME.startButton.dead){
+			  GAME.state = 'main'
+			  swipeControl.tapped = 0;
+		  }
 		break;
 		
 		case 'main':  
@@ -1002,7 +1008,7 @@ function main(){
 
   swipeControl.swipeDir[0] = 0;
   swipeControl.swipeDir[1] = 0;
-  swipeControl.tapped = 0;
+  
 }
 var GAME = new GameControl();
 main();
