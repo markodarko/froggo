@@ -33,13 +33,14 @@ var swipeControl = {
 		  let x = e.changedTouches[0].clientX,
 		      y = e.changedTouches[0].clientY,
 		      t = e.timeStamp-c.time;
-		  if (t<100) c.tapped = 1;
-		  else
+		  let dx = x-c.coord.x0;
+		  let dy = y-c.coord.y0;
 		  if (t<400){
-		  	if      (x-c.coord.x0 >  dist) c.swipeDir = [1, 0];
-			else if (x-c.coord.x0 < -dist) c.swipeDir = [-1, 0];
-			else if (y-c.coord.y0 >  dist) c.swipeDir = [0, 1];
-			else if (y-c.coord.y0 < -dist) c.swipeDir = [0,-1];
+			if (Math.abs(dx) < dist && Math.abs(dy) < dist) c.tapped = 1
+		  	else if (dx >  dist) c.swipeDir = [1, 0];
+			else if (dx < -dist) c.swipeDir = [-1, 0];
+			else if (dy >  dist) c.swipeDir = [0, 1];
+			else if (dy < -dist) c.swipeDir = [0,-1];
 		  }  
 		  c.endTouch.x = x/SCALE-C_OFFSET_X;
 		  c.endTouch.y = y/SCALE-C_OFFSET_Y;
