@@ -26,10 +26,15 @@ grey2	:'#7b7b7b',
 grey3	:'#555555',
 grey4	:'#3d3d3d',
 grey5	:'#323232',
+girl1	:'#fd005d', //body
+girl2	:'#ff8460'//spots
+
+
 }
 
 const COLOR_SETS = {
 frog:	[COLORS.whiteG,COLORS.green2,COLORS.green1,COLORS.yellow1,COLORS.black2],
+frogG:	[COLORS.whiteG,COLORS.girl1,COLORS.girl2,COLORS.yellow1,COLORS.black2],
 stars:	['white',COLORS.yellow1,COLORS.orange1,COLORS.green0,COLORS.whiteG],
 cloud:	[COLORS.white1,COLORS.whiteG],
 wall:	[COLORS.blue2,COLORS.blue1,COLORS.blue3,COLORS.blue3],

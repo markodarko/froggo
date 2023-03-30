@@ -23,6 +23,7 @@ canvas {
 <SCRIPT src= 'menu.js'		></SCRIPT>
 <SCRIPT src= 'helpers.js'	></SCRIPT>
 <SCRIPT src= 'starsBG.js'	></SCRIPT>
+<SCRIPT src= 'pixelfont4.js'></SCRIPT>
 
 <SCRIPT>
 
@@ -32,6 +33,11 @@ var ctx = canvas.getContext('2d');
 const 	GRID_SIZE = 8,
 		GRID_COUNT = 8,
 		C_WIDTH = C_HEIGHT = GRID_SIZE * GRID_COUNT;
+		
+const C_HALF = Math.floor(C_WIDTH/2);
+const C_QRTR = Math.floor(C_WIDTH/4);
+const C_EIGHT = Math.floor(C_WIDTH/8);
+
 
 //canvas.height = window.innerHeight;
 //canvas.width = window.innerWidth;
@@ -109,25 +115,14 @@ function collideCheck(obj1,obj2,dx=0,dy=0){
 }
 
 const LEVEL_DAT = {
-total:13,
+total:14, //13,
 	//s = start
-	//f = finish
+	//g = goal
 	//- = blank space
 	//= = invisible wall	
 	//. = froggy path	
 	//w = wall
 	//L = lava
-template:[
-  '--------',
-  '--------',
-  '--------',
-  '--------',
-  '--------',
-  '--------',
-  '--------',
-  '--------'
-  ],
-
 0:[
   '--------',
   '--------',
@@ -161,7 +156,7 @@ template:[
   '--------'
   ],
   
-  3:[
+3:[
   '-######-',
   '#......#',
   '#.L..w.#',
@@ -172,7 +167,7 @@ template:[
   '-======-'
   ],
   
- 4:[
+4:[
   '--------',
   '-##---##',
   'w.gLLL..',
@@ -194,7 +189,7 @@ template:[
   '-===#.g='
   ],
 
-b:[
+6:[
   '-#######',
   '#s..L..#',
   '#...L..#',
@@ -205,7 +200,7 @@ b:[
   '-======='
   ],
 
-6:[
+7:[
   '--------',
   '-######-',
   '#s.....#',
@@ -216,7 +211,7 @@ b:[
   '--------'
   ],
 
-7:[
+8:[
   '---####-',
   '--#....#',
   '###..s.#',
@@ -227,7 +222,7 @@ b:[
   '--====--'
   ],
   
-8:[
+9:[
   '-######-',
   '#......#',
   '#.ww...#',
@@ -238,7 +233,7 @@ b:[
   '-======-'
   ],
 
-9:[
+10:[
   '--####--',
   '-#...g#-',
   '##.....#',
@@ -249,7 +244,7 @@ b:[
   '--===---'
   ],
 
-10:[
+12:[
   '-#.##.#-',
   '#..s...#',
   '#......#',
@@ -270,14 +265,15 @@ b:[
   '-L.....#',
   '-======-'
   ],
- 12:[
-  '--------',
-  '-wwwwww-',
-  'wwwwwwww',
-  'ws....gw',
-  'wwwwwwww',
-  '-wwwwww-',
-  '--------',
+
+13:[
+  'i#-#-#--',
+  'w,w,w,w-',
+  ',,,,,,,w',
+  'S,,,,,pw',
+  ',,,,,,,w',
+  'w,w,w,w=',
+  '=======-',
   '--------'
   ]
 }
@@ -302,6 +298,13 @@ class Level{
 			gridy = row * GRID_SIZE;
 
 		switch(pattern[row][col]){
+		  case 'S':
+			this.start = [gridx,gridy];
+			this.player = new Froggy(gridx,gridy);
+		  case ',':
+			this.tiles.push(new Tile(col,row,'infinite'));
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+			break;
 		  case 's':
 			this.start = [gridx,gridy];
 			this.player = new Froggy(gridx,gridy);
@@ -309,10 +312,20 @@ class Level{
 			this.tiles.push(new Tile(col,row));
 			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
 		  	break;
-		  case 'g':
-			this.tiles.push(new Goal(col,row));
+		  case 'p':
+			this.tiles.push(new Tile(col,row,'infinite'));
 			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
-			//this.goal.push(new Goal(col,row));
+			var goal = new Princess(col,row)
+			this.tiles.push(goal);
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+			this.goal.push(goal);
+			this.shadow.push([gridx,gridy+7,COLORS.grey3])
+		 	break;
+		  case 'g':
+			var goal = new Goal(col,row)
+			this.tiles.push(goal);
+			this.tileIndex[row*GRID_COUNT + col] = this.tiles.length-1;
+			this.goal.push(goal);
 			this.shadow.push([gridx,gridy+7,COLORS.grey3])
 		 	break;
 		  case 'w':
@@ -346,10 +359,12 @@ class Level{
 		if (this.player.dead == 2) this.clear = 1;
 		else this.reset()
 	}
-	else if (this.score >= this.tileCount && !this.player.dead){
+	else if (this.score >= this.tileCount && this.player.state =='idle'){
+		if(collideCheck(this.player,this.goal)){
 		SOUNDS.teleport.play();
 		this.player.dead = 2;
-		this.score = 0;
+		this.score = -1;
+		}
 	}
   }
   draw(){
@@ -365,6 +380,7 @@ class Level{
 	this.flash.cycleAlpha();
 	if (this.player.dead) this.cloud.draw(this.player.trueX()-4,this.player.trueY()-4)
   }
+
   reset(shrinkReset = 0){
 	this.clear = 0;
 	this.score = 0;
@@ -637,6 +653,21 @@ class Flash{
   }
 }
 
+class Princess extends Block{
+	constructor(x,y){
+		super(x,y);
+		this.breakReset = this.breakCount = 'infinite'
+		this.pressed = 0;
+		this.sprite = new Sprite(SPRITES.frogL,COLOR_SETS.frogG);
+	}
+	draw(){
+		if (this.pressed)return;
+		drawBox(this.x, this.y+2, this.w, 2,COLOR_SETS.frogG[4])		//shadow
+		this.sprite.draw(this.x,this.y-5)
+		this.sprite.updateFrame();
+	}
+}
+
 class Goal extends Block{
   constructor(x,y){
 	super(x,y);
@@ -801,6 +832,8 @@ class Froggy{
 		this.tongue.x += dx;
 		if (this.tongue.x > C_WIDTH || this.tongue.x < 0) this.state = 'tongueReturn';
 		else if(collideCheck(this.tongue,GAME.currentLevel.grabWalls)) {
+			OBJ=GAME.checkTile(this.gridPos)
+			OBJ.pressed = 0;
 			this.state = 'teleport';
 		}
 	  break;
@@ -901,7 +934,7 @@ class Froggy{
 	this.jumpSound = (this.jumpSound+1)%2
   }
   drawFlash(){
-	this.flash.draw(this.trueX(),this.trueY())
+	this.flash.draw(this.trueX(),this.trueY(),GRID_SIZE,GRID_SIZE-1)
   }
   shootTongue(){
 	this.state='tongueExtend';
@@ -976,7 +1009,11 @@ class GameControl{
 	this.currentLevel = this.levels[this.levelNum];
 	this.state = 'start_menu';
 	this.BG = new GameBackground();
-	this.startButton = new StartFrog();
+	this.startButton = new StartFrog(SPRITES.frogR,COLOR_SETS.frog);
+	this.startButton2 = new StartFrog(SPRITES.frogL,COLOR_SETS.frogG,false, GRID_SIZE*2);
+	this.win = 0;
+	//						  (string,x=0,y=0,color='black', centered=1, size=5, speed=10)
+	this.message = new Textbox("YOU WON DAWG!",C_HALF,C_EIGHT,'cyan',1,1)
   }
 
   checkTile(coords){
@@ -996,6 +1033,7 @@ class GameControl{
 		swipeControl.endTouch.x = swipeControl.endTouch.y = 0;
 		this.levelNum = 0;
 		this.levels.forEach(level => {level.reset(1)})
+		this.win = 1;
 	}
 	this.currentLevel = this.levels[this.levelNum];
   }
@@ -1017,6 +1055,11 @@ function main(){
 		  GAME.startButton.update();
 		  GAME.startButton.draw();
 		  if (GAME.startButton.dead) GAME.state = 'main'
+		  if (GAME.win){
+			GAME.message.draw()
+			GAME.startButton2.update();
+			GAME.startButton2.draw();
+		  }
 		break;
 		
 		case 'main':  
@@ -1026,7 +1069,6 @@ function main(){
 			GAME.gotoNextLevel();
 		  }
 		break;
-
 	}
 
   //horizontal black bars

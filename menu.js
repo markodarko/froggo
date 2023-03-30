@@ -1,11 +1,13 @@
 class StartFrog{
-  constructor(){
+  constructor(sprite, color, pressable = true, offsetX = 0){
 	this.reset();
 	this.w = this.h = GRID_SIZE*2;
 	this.offsetX = Math.floor(this.w/4)
 	this.offsetY = Math.floor(this.h/4)
-	this.sprite = new Sprite(SPRITES.frogR,COLOR_SETS.frog);
+	this.sprite = new Sprite(sprite,color);
 	this.floatMax = 1;
+	this.x += offsetX;
+	this.pressable = pressable;
 	
   }
   draw(){
@@ -19,10 +21,13 @@ class StartFrog{
 		this.speed = Math.min(this.speed+.2, 3)
 		return;
 	}
-	else if(collidePointCheck(swipeControl.endTouch,this)){
-		this.start_pressed = 1 ;
-		this.speed = -1.5;
-		GAME.BG.warp();
+	
+	else if (this.pressable){
+		if(collidePointCheck(swipeControl.endTouch,this)){
+			this.start_pressed = 1 ;
+			this.speed = -1.5;
+			GAME.BG.warp();
+		}
 	}
 	
 	this.time++;
